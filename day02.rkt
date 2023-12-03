@@ -10,10 +10,10 @@
   (for/hasheq ([reveal-str (in-list (string-split set-str ","))])
     (match-define (regexp #rx"([0-9]+) ([a-z]+)"
                           (list _
-                                (app string->number n)
+                                (app string->number blocks)
                                 (app string->symbol color)))
       reveal-str)
-    (values color n)))
+    (values color blocks)))
 
 (define (parse-game line)
   (match-define (regexp #rx"Game ([^:]+): (.+)"
@@ -34,11 +34,10 @@
    (<= (hash-ref s 'blue 0) 14)))
 
 (define (game-minimums g)
-  (for/fold ([minimums (hasheq 'red 0 'green 0 'blue 0)])
-            ([s (in-list (game-sets g))])
-    (for/fold ([minimums minimums])
-              ([color (in-list '(red green blue))])
-      (hash-update minimums color (λ (n) (max n (hash-ref s color 0)))))))
+  (for*/fold ([minimums (hasheq 'red 0 'green 0 'blue 0)])
+             ([s (in-list (game-sets g))]
+              [c (in-list '(red green blue))])
+    (hash-update minimums c (λ (blocks) (max blocks (hash-ref s c 0))))))
 
 (define (game-power g)
   (apply * (hash-values (game-minimums g))))
