@@ -8,7 +8,7 @@
   #:transparent)
 
 (define cards
-  (call-with-input-file "day04-example.txt"
+  (call-with-input-file "day04.txt"
     (lambda (in)
       (for/vector ([line (in-lines in)])
         (match-define (regexp #rx"Card +([0-9]+): ([^|]+) \\| (.+)"
