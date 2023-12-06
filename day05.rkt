@@ -10,7 +10,7 @@
   (match-define (mapping dst src len) m)
   (and (>= v src)
        (<= v (+ src len))
-       (- v (- src dst))))
+       (+  v (- dst src))))
 
 (define (parse-mapping str)
   (apply mapping (map string->number (string-split str))))
@@ -94,7 +94,8 @@
       (cons lo src-hi)
       (cons (add1 src-hi) hi))]
     [else
-     (list (cons lo hi))]))
+     (list
+      (cons lo hi))]))
 
 (define (mapping-map-range m r)
   (define m-lo (mapping-map m (car r)))
@@ -116,28 +117,31 @@
          pairs)
         (cddr seeds))])))
 
-(define (find-location-ranges maps seed-ranges)
-  (for/fold ([ranges seed-ranges])
+(define (map-ranges mappings ranges)
+  ;; Split the ranges against all the mappings.
+  (define split-ranges
+    (let loop ([ranges ranges]
+               [mappings mappings])
+      (if (null? mappings)
+          ranges
+          (loop
+           (apply append
+                  (for/list ([r (in-list ranges)])
+                    (mapping-split-range (car mappings) r)))
+           (cdr mappings)))))
+  ;; Then map the split ranges.
+  (for/list ([r (in-list split-ranges)])
+    (or
+     (for*/first ([m (in-list mappings)]
+                  [m-r (in-value (mapping-map-range m r))]
+                  #:when m-r)
+       m-r)
+     r)))
+
+(define (find-location-ranges maps ranges)
+  (for/fold ([ranges ranges])
             ([mappings (in-list maps)])
-    ;; Split the ranges against all the mappings.
-    (define split-ranges
-      (let loop ([ranges ranges]
-                 [mappings mappings])
-        (if (null? mappings)
-            ranges
-            (loop
-             (apply append
-                    (for/list ([r (in-list ranges)])
-                      (mapping-split-range (car mappings) r)))
-             (cdr mappings)))))
-    ;; Then map the split ranges.
-    (for/list ([r (in-list split-ranges)])
-      (or
-       (for*/first ([m (in-list mappings)]
-                    [m-r (in-value (mapping-map-range m r))]
-                    #:when m-r)
-         m-r)
-       r))))
+    (map-ranges mappings ranges)))
 
 (define part2
   (for*/fold ([res +inf.0])
