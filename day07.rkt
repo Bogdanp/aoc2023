@@ -2,7 +2,6 @@
 
 (require racket/list
          racket/match
-         racket/port
          racket/vector)
 
 (define hands
@@ -97,26 +96,24 @@
     [(hash-has-key? counts #\J)
      (define non-jokers
        (remv #\J (hash-keys counts)))
-     (define combinations
+     ;; When
+     ;;  non-jokers = '(#\Q #\2)
+     ;; Then
+     ;;  replacementss = '((#\Q #\Q) (#\Q #\2) (#\2 #\2))
+     (define replacementss
        (remove-duplicates
         (map (λ (cards) (sort cards char>?))
-             (apply cartesian-product
-                    (for/list ([_ (in-range (hash-ref counts #\J))])
-                      non-jokers)))))
+             (apply cartesian-product (make-list (hash-ref counts #\J) non-jokers)))))
      (for/fold ([res #f] #:result (or res h))
-               ([combination (in-list combinations)])
+               ([replacements (in-list replacementss)])
        (define replacement-hand
-         (call-with-output-string
-          (lambda (out)
-            (for/fold ([replacements combination])
-                      ([c (in-string h)])
-              (cond
-                [(char=? c #\J)
-                 (display (car replacements) out)
-                 (cdr replacements)]
-                [else
-                 (display c out)
-                 replacements])))))
+         (for/fold ([chars null]
+                    [replacements replacements]
+                    #:result (apply string (reverse chars)))
+                   ([c (in-string h)])
+           (if (char=? c #\J)
+               (values (cons (car replacements) chars) (cdr replacements))
+               (values (cons c chars) replacements))))
        (if (or (not res)
                (> (hand-type-numeric replacement-hand)
                   (hand-type-numeric res)))
